@@ -1,26 +1,32 @@
-# create VPC
+/* 
+   This Terraform deployment creates the following resources:
+   VPC, Subnet, Google Kubernetes Engine, Jump Host cloud router, Cloud Nat
+   */
+
+#-------------------------Create VPC Resources---------------------
+
 resource "google_compute_network" "vpc" {
-  name                    = "everbyte-dev-vpc"
+  name                    = "${var.environment}-vpc"
   auto_create_subnetworks = false
 }
 
-# create Subnet
 resource "google_compute_subnetwork" "subnet" {
-  name          = "everbyte-us-dev-subnet"
-  region        = "us-central1"
+  name          = "${var.environment}-us-subnet"
+  region        = var.gcp_region
   network       = google_compute_network.vpc.name
-  ip_cidr_range = "10.190.0.0/24"
+  ip_cidr_range = var.subnet_cidr
 }
 
-# Create GKE cluster with 2 nodes in our custom VPC/Subnet
-resource "google_container_cluster" "primary" {
-  name                     = "everbyte-cluster"
-  location                 = "us-central1-a"
+
+#-------------------------Create GKE cluster Resources---------------------
+
+resource "google_container_cluster" "master" {
+  name                     = "${var.environment}-cluster"
+  location                 = var.gcp_zone
   network                  = google_compute_network.vpc.name
   subnetwork               = google_compute_subnetwork.subnet.name
-  remove_default_node_pool = true ## create the smallest possible default node pool and immediately delete it.
-  # networking_mode          = "VPC_NATIVE" 
-  initial_node_count = 1
+  remove_default_node_pool = true
+  initial_node_count       = 1
 
   private_cluster_config {
     enable_private_endpoint = true
@@ -33,18 +39,18 @@ resource "google_container_cluster" "primary" {
   }
   master_authorized_networks_config {
     cidr_blocks {
-      cidr_block   = "10.0.0.7/32"
-      display_name = "net1"
+      cidr_block   = "${google_compute_address.internal_ip_addr.address}/32"
+      display_name = "Jump host internal IP"
     }
 
   }
 }
 
-# Create managed node pool
-resource "google_container_node_pool" "primary_nodes" {
-  name       = google_container_cluster.primary.name
-  location   = "us-central1-a"
-  cluster    = google_container_cluster.primary.name
+
+resource "google_container_node_pool" "workers" {
+  name       = google_container_cluster.master.name
+  location   = var.gcp_zone
+  cluster    = google_container_cluster.master.name
   node_count = 3
 
   node_config {
@@ -54,7 +60,7 @@ resource "google_container_node_pool" "primary_nodes" {
     ]
 
     labels = {
-      env = "dev"
+      env = var.environment
     }
 
     machine_type = "n1-standard-1"
@@ -67,23 +73,17 @@ resource "google_container_node_pool" "primary_nodes" {
   }
 }
 
-## Create jump host . We will allow this jump host to access GKE cluster. the ip of this jump host is already authorized to allowin the GKE cluster
-
-resource "google_compute_address" "my_internal_ip_addr" {
-  project      = "geczra-380202"
-  address_type = "INTERNAL"
-  region       = "us-central1"
-  subnetwork   = google_compute_subnetwork.subnet.name
-  name         = "my-ip"
-  address      = "10.190.0.7"
-  description  = "An internal IP address for my jump host"
-}
+#-------------------------Create compute instance ---------------------
 
 resource "google_compute_instance" "evebyte" {
-  project      = "geczra-380202"
-  zone         = "us-central1-a"
-  name         = "everbyte-jump-host"
+  project      = var.gcp_project
+  zone         = var.gcp_zone
+  name         = "${var.environment}-jump-host"
   machine_type = "e2-medium"
+
+  metadata = {
+    startup-script = var.gce_startup_script
+  }
 
   boot_disk {
     initialize_params {
@@ -92,18 +92,28 @@ resource "google_compute_instance" "evebyte" {
   }
   network_interface {
     network    = google_compute_network.vpc.name
-    subnetwork = google_compute_subnetwork.subnet.name # Replace with a reference or self link to your subnet, in quotes
-    network_ip = google_compute_address.my_internal_ip_addr.address
+    subnetwork = google_compute_subnetwork.subnet.name
+    network_ip = google_compute_address.internal_ip_addr.address
   }
 
 }
 
-## Creare Firewall to access jump hist via iap
+resource "google_compute_address" "internal_ip_addr" {
+  project      = var.gcp_project
+  address_type = "INTERNAL"
+  region       = var.gcp_region
+  subnetwork   = google_compute_subnetwork.subnet.name
+  name         = "${var.environment}-internal-ip"
+  address      = "10.190.0.2"
+  description  = "An internal IP address for jump host"
+}
 
-resource "google_compute_firewall" "rules" {
-  project = "geczra-380202"
-  name    = "allow-ssh"
-  network = google_compute_network.vpc.name # Replace with a reference or self link to your network, in quotes
+#-------------------------Create Firewall for ssh --------------------
+
+resource "google_compute_firewall" "allow_ssh" {
+  project = var.gcp_project
+  name    = "allow-ssh-from-anywhere"
+  network = google_compute_network.vpc.name
 
   allow {
     protocol = "tcp"
@@ -112,31 +122,44 @@ resource "google_compute_firewall" "rules" {
   source_ranges = ["35.235.240.0/20"]
 }
 
+resource "google_compute_firewall" "allo_iap" {
+  project = var.gcp_project
+  name    = "allow-ingress-from-iap"
+  network = google_compute_network.vpc.name
 
-## Create IAP SSH permissions for your test instance
+  allow {
+    protocol = "tcp"
+    ports    = ["30000-32767"]
+  }
+  source_ranges = ["35.235.240.0/20"]
+}
+
+#-------------------------Assign Iam Role to Service account --------------------
+
 
 resource "google_project_iam_member" "project" {
-  project = "geczra-380202"
+  project = var.gcp_project
   role    = "roles/iap.tunnelResourceAccessor"
   member  = "serviceAccount:terraform-iap-ssh@geczra-380202.iam.gserviceaccount.com"
 }
 
-# create cloud router for nat gateway
+
+#------------------------- create cloud router for nat gateway --------------------
+
+
 resource "google_compute_router" "router" {
-  project = "geczra-380202"
-  name    = "nat-router"
+  project = var.gcp_project
+  name    = "${var.environment}-nat-router"
   network = google_compute_network.vpc.name
-  region  = "us-central1"
+  region  = var.gcp_region
 }
 
-## Create Nat Gateway with module
 
 module "cloud-nat" {
   source     = "terraform-google-modules/cloud-nat/google"
   version    = "~> 1.2"
-  project_id = "geczra-380202"
-  region     = "us-central1"
+  project_id = var.gcp_project
+  region     = var.gcp_region
   router     = google_compute_router.router.name
-  name       = "nat-config"
-
+  name       = "${var.environment}-nat-config"
 }

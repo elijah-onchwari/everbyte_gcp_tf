@@ -12,8 +12,7 @@ terraform {
 }
 
 provider "google" {
-  region      = "us-central1"
-  project     = "geczra-380202"
-#  credentials = file("terraform.json")
-  zone        = "us-central1-a"
+  region  = var.gcp_region
+  project = var.gcp_project
+  zone    = var.gcp_zone
 }

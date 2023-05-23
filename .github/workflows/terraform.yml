@@ -24,11 +24,18 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    # Install the latest version of Terraform CLI and configure the Terraform CLI configuration file with a Terraform Cloud user API token
-    # - name: Setup Terraform
-    #   uses: hashicorp/setup-terraform@v1
-    #   with:
-    #     cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
+    # Setup terraform variables
+    - name: Setup terraform variables
+      id: vars
+      run: |-
+        cat > pipeline.auto.tfvars <<EOF
+        environment="${{ vars.APP_ENVIRONMENT }}" 
+        gcp_project="${{ vars.GCP_PROJECT }}" 
+        gcp_region="${{ vars.GCP_REGION}}" 
+        gcp_zone="${{ vars.GCP_ZONE }}" 
+        subnet_cidr="${{ vars.SUBNET_CIDR }}"
+        gce_startup_script=${{ vars.GCPE_STARTUP_SCRIPT }}
+        EOF
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
@@ -36,11 +43,6 @@ jobs:
       env:
         GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }} 
 
-    # Checks that all Terraform configuration files adhere to a canonical format
-    # - name: Terraform Format
-    #   run: terraform fmt -check
-    #   env:
-    #     GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
     # Generates an execution plan for Terraform
     - name: Terraform Plan

@@ -1,1 +1,4 @@
-terraform.json  
+terraform.json 
+.terraform.lock.hcl
+/.terraform
+pipeline.auto.tfvars
