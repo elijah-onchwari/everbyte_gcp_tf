@@ -5,11 +5,15 @@ terraform {
       version = "4.65.2"
     }
   }
+  backend "gcs" {
+    bucket = "everbyte-tf-state"
+    prefix = "dev"
+  }
 }
 
 provider "google" {
   region      = "us-central1"
   project     = "geczra-380202"
-  credentials = file("terraform.json")
+#  credentials = file("terraform.json")
   zone        = "us-central1-a"
 }
