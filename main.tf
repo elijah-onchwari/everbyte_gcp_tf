@@ -101,7 +101,7 @@ resource "google_compute_instance" "evebyte" {
   }
   service_account {
     # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
-    email  = google_service_account.default.email
+    email  = "terraform@geczra-380202.iam.gserviceaccount.com"
     scopes = ["cloud-platform"]
   }
 
