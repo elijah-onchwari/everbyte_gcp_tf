@@ -75,7 +75,7 @@ resource "google_container_node_pool" "workers" {
 
 #-------------------------Create compute instance ---------------------
 resource "google_service_account" "default" {
-  account_id   = "terraform@geczra-380202.iam.gserviceaccount.com"
+  account_id   = "terraform"
   display_name = "Service Account"
 }
 
