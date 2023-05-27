@@ -80,15 +80,13 @@ resource "google_service_account" "default" {
 }
 
 resource "google_compute_instance" "evebyte" {
-  project      = var.gcp_project
-  zone         = var.gcp_zone
-  name         = "${var.environment}-jump-host"
-  machine_type = "e2-medium"
+  project                   = var.gcp_project
+  zone                      = var.gcp_zone
+  name                      = "${var.environment}-jump-host"
+  machine_type              = "e2-medium"
+  allow_stopping_for_update = true
 
-  metadata = {
-    startup-script-url = "gs://everbyte-public/start-up.sh"
-  }
-
+  metadata_startup_script = "gs://everbyte-public/start-up.sh"
   boot_disk {
     initialize_params {
       image = "ubuntu-os-cloud/ubuntu-2204-lts"
