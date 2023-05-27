@@ -23,8 +23,3 @@ variable "subnet_cidr" {
   description = "Subnet cidr block"
   type        = string
 }
-
-variable "gce_startup_script" {
-  description = "startup script to setup jump-host"
-  type        = string
-}

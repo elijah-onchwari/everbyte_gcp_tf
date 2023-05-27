@@ -33,8 +33,7 @@ jobs:
         gcp_project="${{ vars.GCP_PROJECT }}" 
         gcp_region="${{ vars.GCP_REGION}}" 
         gcp_zone="${{ vars.GCP_ZONE }}" 
-        subnet_cidr="${{ vars.SUBNET_CIDR }}"
-        gce_startup_script=${{ vars.GCPE_STARTUP_SCRIPT }}
+        subnet_cidr="${{ vars.SUBNET_CIDR }}" 
         EOF
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.

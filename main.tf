@@ -74,6 +74,10 @@ resource "google_container_node_pool" "workers" {
 }
 
 #-------------------------Create compute instance ---------------------
+resource "google_service_account" "default" {
+  account_id   = "${var.environment}-internal-ip-service-account"
+  display_name = "Service Account"
+}
 
 resource "google_compute_instance" "evebyte" {
   project      = var.gcp_project
@@ -82,18 +86,23 @@ resource "google_compute_instance" "evebyte" {
   machine_type = "e2-medium"
 
   metadata = {
-    startup-script = var.gce_startup_script
+    startup-script-url = "gs://everbyte-public/start-up.sh"
   }
 
   boot_disk {
     initialize_params {
-      image = "debian-cloud/debian-11"
+      image = "ubuntu-os-cloud/ubuntu-2204-lts"
     }
   }
   network_interface {
     network    = google_compute_network.vpc.name
     subnetwork = google_compute_subnetwork.subnet.name
     network_ip = google_compute_address.internal_ip_addr.address
+  }
+  service_account {
+    # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
+    email  = google_service_account.default.email
+    scopes = ["cloud-platform"]
   }
 
 }
