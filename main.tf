@@ -75,7 +75,7 @@ resource "google_container_node_pool" "workers" {
 
 #-------------------------Create compute instance ---------------------
 resource "google_service_account" "default" {
-  account_id   = "${var.environment}-internal-ip-service-account"
+  account_id   = "101139402286737138952"
   display_name = "Service Account"
 }
 
