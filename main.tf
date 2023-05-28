@@ -74,10 +74,10 @@ resource "google_container_node_pool" "workers" {
 }
 
 #-------------------------Create compute instance ---------------------
-resource "google_service_account" "default" {
-  account_id   = "acess-api"
-  display_name = "Service Account"
-}
+# resource "google_service_account" "default" {
+#   account_id   = "acess-api"
+#   display_name = "Service Account"
+# }
 
 resource "google_compute_instance" "evebyte" {
   project                   = var.gcp_project
