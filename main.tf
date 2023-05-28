@@ -85,9 +85,10 @@ resource "google_compute_instance" "evebyte" {
   name                      = "${var.environment}-jump-host"
   machine_type              = "e2-medium"
   allow_stopping_for_update = true
-  metadata = {
-    startup-script-url = "gs://everbyte-public/start-up.sh"
-  }
+  # metadata = {
+  #   startup-script-url = "gs://everbyte-public/start-up.sh"
+  # }
+  metadata_startup_script = "gs://everbyte-public/start-up.sh"
   boot_disk {
     initialize_params {
       image = "debian-cloud/debian-11"
