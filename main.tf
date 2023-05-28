@@ -104,7 +104,7 @@ resource "google_compute_instance" "evebyte" {
     email  = "terraform@geczra-380202.iam.gserviceaccount.com"
     scopes = ["cloud-platform"]
   }
-
+  depends_on = [google_container_node_pool.workers]
 }
 
 resource "google_compute_address" "internal_ip_addr" {
