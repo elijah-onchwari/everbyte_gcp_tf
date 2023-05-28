@@ -90,7 +90,7 @@ resource "google_compute_instance" "evebyte" {
   }
   boot_disk {
     initialize_params {
-      image = "ubuntu-os-cloud/ubuntu-2204-lts"
+      image = "debian-cloud/debian-11"
     }
   }
   network_interface {
