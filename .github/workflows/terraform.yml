@@ -1,4 +1,4 @@
-name: 'Provision Everbyte Infrastructure'
+name: 'Provision Everbyte Infrastructure '
 
 on:
   push:
